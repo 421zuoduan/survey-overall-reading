@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "IdeaAudit",
+  "type": "object",
+  "required": ["idea_id", "claim", "novelty_status", "decision"],
+  "properties": {
+    "idea_id": {"type": "string"},
+    "claim": {"type": "string"},
+    "nearest_existing_works": {"type": "array"},
+    "novelty_status": {
+      "enum": ["likely_new", "partially_overlapping", "likely_already_done", "insufficient_evidence"]
+    },
+    "decision": {"enum": ["keep", "revise", "drop"]}
+  }
+}
+

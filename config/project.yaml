@@ -1,0 +1,68 @@
+model:
+  name: gpt-5.5
+  reasoning_effort: medium
+
+reading:
+  language: zh-CN
+  final_goal: generate_neurips_icml_iclr_ideas
+  same_field_top_percent: 20
+  hard_cap: null
+  low_confidence_action: continue_with_flag
+  policy:
+    prompt_engineering_heavy:
+      action: exclude_from_deep_reading
+      keep_metadata: true
+      score_penalty: 0.25
+      detection:
+        tag: prompt_engineering_heavy
+        raw_score: prompt_engineering_dependency
+        threshold: 0.70
+      exception: keep_only_if_foundational_benchmark_or_theoretical
+
+download:
+  allow_paywalled_bypass: false
+  prefer_open_access: true
+  save_failed_items: true
+
+network:
+  global_concurrency: 8
+  metadata_concurrency: 5
+  pdf_download_concurrency: 3
+  adaptive_rate_limit: true
+  retry:
+    max_attempts: 3
+    backoff_schedule_seconds: [30, 120, 600]
+  per_source_concurrency:
+    openalex: 5
+    crossref: 3
+    semantic_scholar: 2
+    openreview: 2
+    pmlr: 3
+    neurips: 3
+    aaai_ojs: 2
+    author_homepage: 1
+
+top_conference_supplement:
+  enabled: true
+  target_venues: [NeurIPS, ICML, ICLR, AAAI]
+  recent_year_window: 2
+  metadata_candidate_limit_per_venue_year: 100
+  reading_queue_limit_per_cluster: 60
+  min_topic_relevance: 0.60
+
+compliance:
+  require_download_record: true
+  allow_sources:
+    - arxiv
+    - publisher_oa
+    - pmlr
+    - openreview
+    - proceedings
+    - author_homepage
+    - institutional_repository
+  blocked_actions:
+    - bypass_paywall
+    - use_login_required_content
+    - download_subscription_pdf
+  on_unclear_license: save_link_only
+  require_version_match_confidence: 0.80

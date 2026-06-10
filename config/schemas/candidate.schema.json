@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CandidatePaper",
+  "type": "object",
+  "required": ["identity"],
+  "properties": {
+    "paper_id": {"type": "string"},
+    "identity": {
+      "type": "object",
+      "required": ["title"],
+      "properties": {
+        "title": {"type": "string"},
+        "authors": {"type": "array", "items": {"type": "string"}},
+        "year": {"type": ["integer", "null"]},
+        "venue": {"type": "string"},
+        "doi": {"type": "string"},
+        "arxiv": {"type": "string"}
+      }
+    },
+    "candidate_source": {"type": "array", "items": {"type": "string"}},
+    "tags": {"type": "array", "items": {"type": "string"}},
+    "exclude_from_deep_reading": {"type": "boolean"},
+    "exclusion_reason": {"type": "string"},
+    "raw_scores": {"type": "object", "additionalProperties": {"type": "number"}},
+    "idea_scores": {"type": "object", "additionalProperties": {"type": "number"}},
+    "bonuses": {"type": "object", "additionalProperties": {"type": "number"}},
+    "confidence": {"enum": ["High", "Medium", "Low"]},
+    "needs_later_review": {"type": "boolean"}
+  }
+}

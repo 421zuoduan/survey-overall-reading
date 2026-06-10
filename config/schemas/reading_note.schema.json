@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ReadingNote",
+  "type": "object",
+  "required": ["paper_id", "title", "sections"],
+  "properties": {
+    "paper_id": {"type": "string"},
+    "title": {"type": "string"},
+    "sections": {"type": "object"},
+    "needs_later_review": {"type": "boolean"}
+  }
+}
+

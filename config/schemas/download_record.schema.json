@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DownloadRecord",
+  "type": "object",
+  "required": ["paper_id", "source_url", "source_type", "access_status", "action"],
+  "properties": {
+    "paper_id": {"type": "string"},
+    "source_url": {"type": "string"},
+    "source_type": {
+      "enum": ["arxiv", "publisher_oa", "pmlr", "openreview", "proceedings", "author_homepage", "institutional_repository", "unknown"]
+    },
+    "access_status": {
+      "enum": ["open_access", "free_to_read", "preprint", "accepted_manuscript", "metadata_only", "blocked"]
+    },
+    "license": {"type": "string"},
+    "access_date": {"type": "string"},
+    "can_download": {"type": "boolean"},
+    "can_text_mine": {"type": ["boolean", "string"]},
+    "action": {"enum": ["download_pdf", "save_link_only", "skip"]},
+    "reason": {"type": "string"}
+  }
+}
+

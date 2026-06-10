@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "EvidencePacket",
+  "type": "object",
+  "required": ["paper_id", "title", "scoring"],
+  "properties": {
+    "paper_id": {"type": "string"},
+    "title": {"type": "string"},
+    "cited_by_reviews": {"type": "array"},
+    "external_metadata": {"type": "object"},
+    "scoring": {"type": "object"}
+  }
+}
+

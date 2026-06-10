@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PaperId",
+  "type": "object",
+  "required": ["paper_id", "title"],
+  "properties": {
+    "paper_id": {"type": "string"},
+    "title": {"type": "string"},
+    "authors": {"type": "array", "items": {"type": "string"}},
+    "year": {"type": ["integer", "null"]},
+    "doi": {"type": "string"},
+    "arxiv": {"type": "string"}
+  }
+}
+
