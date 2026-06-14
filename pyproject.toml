@@ -3,6 +3,7 @@ name = "paper-reading-system"
 version = "0.1.0"
 description = "Offline-first workflow helpers for survey-to-paper deep reading."
 requires-python = ">=3.9"
+dependencies = ["pypdf>=6.0"]
 
 [project.scripts]
 paper-reading = "paper_reading_system.cli:main"
@@ -10,4 +11,3 @@ paper-reading = "paper_reading_system.cli:main"
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-

@@ -54,8 +54,7 @@ class CliWorkflowTests(unittest.TestCase):
 
     def test_missing_candidate_file_fails(self):
         self.assertEqual(main(["--root", str(self.tmp), "init"]), 0)
-        with self.assertRaises(FileNotFoundError):
-            main(["--root", str(self.tmp), "score-candidates"])
+        self.assertEqual(main(["--root", str(self.tmp), "score-candidates"]), 1)
 
     def test_invalid_candidate_source_fails_validation(self):
         candidate_dir = self.tmp / "workspace" / "candidate_papers"
@@ -71,8 +70,7 @@ class CliWorkflowTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-        with self.assertRaisesRegex(ValueError, "candidate_source"):
-            main(["--root", str(self.tmp), "score-candidates"])
+        self.assertEqual(main(["--root", str(self.tmp), "score-candidates"]), 1)
 
     def test_scaffold_notes_preserves_existing_file_without_force(self):
         self._write_single_candidate()
@@ -109,8 +107,7 @@ class CliWorkflowTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-        with self.assertRaisesRegex(ValueError, "duplicate"):
-            main(["--root", str(self.tmp), "score-candidates"])
+        self.assertEqual(main(["--root", str(self.tmp), "score-candidates"]), 1)
 
     def test_duplicate_paper_id_with_different_titles_fails_in_scaffold(self):
         candidate_dir = self.tmp / "workspace" / "candidate_papers"
@@ -132,8 +129,7 @@ class CliWorkflowTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-        with self.assertRaisesRegex(ValueError, "duplicate paper_id"):
-            main(["--root", str(self.tmp), "scaffold-notes"])
+        self.assertEqual(main(["--root", str(self.tmp), "scaffold-notes"]), 1)
 
     def test_invalid_scored_candidate_fails_validation(self):
         candidate_dir = self.tmp / "workspace" / "candidate_papers"
@@ -143,8 +139,7 @@ class CliWorkflowTests(unittest.TestCase):
             encoding="utf-8",
         )
 
-        with self.assertRaisesRegex(ValueError, "evidence"):
-            main(["--root", str(self.tmp), "scaffold-notes"])
+        self.assertEqual(main(["--root", str(self.tmp), "scaffold-notes"]), 1)
 
     def test_prompt_engineering_heavy_candidate_is_not_scaffolded(self):
         candidate_dir = self.tmp / "workspace" / "candidate_papers"

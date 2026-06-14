@@ -40,3 +40,6 @@ workspace/download_queue/
 notes/index.md
 notes/deep_reading/
 reports/
+
+.tmp-swift-cache
+notes/deep_reading_agentic

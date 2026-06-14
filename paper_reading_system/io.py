@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import tempfile
 from pathlib import Path
 from typing import Iterable, Iterator, Tuple
 
@@ -37,10 +38,16 @@ def read_jsonl_with_line(path: Path) -> Iterator[Tuple[int, dict]]:
 
 def write_jsonl(path: Path, rows: Iterable[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as handle:
-        for row in rows:
-            handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True))
-            handle.write("\n")
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=path.parent, delete=False) as handle:
+        temp_path = Path(handle.name)
+        try:
+            for row in rows:
+                handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True))
+                handle.write("\n")
+        except Exception:
+            temp_path.unlink(missing_ok=True)
+            raise
+    temp_path.replace(path)
 
 
 def read_candidates(path: Path) -> list[CandidatePaper]:

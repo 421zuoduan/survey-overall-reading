@@ -49,8 +49,9 @@ Orchestrator 必须先确认本次运行属于哪一种模式：
 - 下载只使用合法公开来源，不绕过付费墙、登录或机构订阅限制。
 - 对 prompt-engineering-heavy 论文默认保留 metadata 但跳过精读。
 - 生成最终报告和索引，而不仅是样例输出。
-- 如果当前 CLI 尚未实现某阶段命令，不能把“CLI 缺命令”当作 production_run 的停止理由；应使用脚本、临时工具、可用 API、PDF 解析库或 agent 自身能力完成该阶段，并把结果写入约定目录。
-- 如果必须临时写脚本，优先写在 ignored 的 `workspace/` 或系统临时目录中；除非用户要求沉淀为项目功能，否则不要修改源码。
+- 对 one-paper-one-agent 精读，Orchestrator 必须把 `workspace/deep_reading_agentic/agentic_assignments.jsonl` 视为待清空队列，持续启动、回收和复查 reader subagents，直到所有可处理 assignment 都完成，或被明确标记为 blocked / excluded 并写入报告。
+- 如果当前 CLI 尚未实现某阶段命令，不能把“CLI 缺命令”当作 production_run 的停止理由；应使用临时工具、可用 API、PDF 解析库或 agent 自身能力完成该阶段，并把结果写入约定目录。
+- 如果必须临时写脚本，优先写在 ignored 的 `workspace/` 或系统临时目录中；临时脚本只能是短期脚手架。可复用的确定性逻辑应沉淀为 `paper_reading_system/` CLI 工具；用不到的临时脚本应删除或归档，不能成为隐藏的 production orchestrator。
 
 正式模式的完成标准：
 
@@ -58,7 +59,8 @@ Orchestrator 必须先确认本次运行属于哪一种模式：
 - `workspace/candidate_papers/deduplicated_candidates.jsonl` 或等价候选池存在。
 - `workspace/download_queue/download_records.jsonl` 存在，并记录成功、失败和 link-only 项。
 - `papers/metadata/{paper_id}.json` 存在于已处理论文。
-- 对进入精读队列且 PDF 可用的论文，生成 `notes/deep_reading/*.md`。
+- 对进入精读队列且 PDF 可用的论文，生成精读笔记。默认 legacy 输出为 `notes/deep_reading/*.md`；如果启用 one-paper-one-agent 模式，输出到 `notes/deep_reading_agentic/*.md`，并以 `workspace/deep_reading_agentic/agentic_assignments.jsonl` 作为唯一调度源。
+- one-paper-one-agent 精读的完成标准不是“启动过一批 reader”，而是把可处理的 assignment 处理完：所有可读 PDF 都应对应到已完成笔记、明确排除项或明确阻塞项，并在 `reports/run_summary.md` 中给出剩余队列说明。
 - `reports/missing_papers.md` 记录未下载或不合法下载的论文。
 - `reports/qa_findings.md` 和 `reports/run_summary.md` 存在。
 - 如果执行 idea 阶段，生成 `reports/top_conference_ideas.md` 和 `reports/idea_novelty_audit.md`。
@@ -86,6 +88,7 @@ Orchestrator 不负责：
 - 覆盖用户已有精读笔记。
 - 把低置信度推断伪装成确定事实。
 - 因某个阶段还没有正式代码实现就放弃 production_run。
+- 把一个 monolithic production 脚本当作主控流程。production_run 的主控必须是 Orchestrator Agent；CLI 只是可重复、可测试的阶段工具。
 
 ## 3. 必读文件
 
@@ -132,6 +135,24 @@ review_parse
 
 production_run 的原则是：**缺少封装好的命令不是完成任务的理由，只是实现方式需要临时降级。**
 
+当前已沉淀为正式 CLI 的确定性工具包括：
+
+```bash
+python3 -m paper_reading_system reconcile-downloads
+python3 -m paper_reading_system apply-dedup-plan
+python3 -m paper_reading_system build-agentic-assignments
+python3 -m paper_reading_system preflight-agentic-reading --archive-stale
+```
+
+边界原则：
+
+- Orchestrator Agent 负责决策、调度、subagent 分配、低置信语义判断和停止条件。
+- CLI 负责确定性 artifact 变换、校验、报告渲染和状态记录。
+- dedup 的语义结论必须来自 dedicated dedup subagent 或人工审核；CLI 只机械应用 `dedup_agent_plan.json`。
+- deep reading 的学术理解必须由 one-paper-one-agent reader subagent 完成；CLI 只生成 assignment、校验 PDF/metadata 和输出路径。
+- one-paper-one-agent reader subagents 必须由当前 Orchestrator Agent 在同一次 `production_run` 中主动启动和回收；不得把“多 agent 并行精读”降级为后续人工另启、另一个独立流程、或只在最终建议中提醒用户去做。
+- 临时脚本不能长期作为 production 入口。可复用则 merge 进 CLI；不可复用则删除或归档。
+
 允许的临时执行方式：
 
 - 使用 Python 脚本解析 PDF、JSONL、Markdown 或下载记录。
@@ -145,6 +166,7 @@ production_run 的原则是：**缺少封装好的命令不是完成任务的理
 - 跳过 schema/字段结构，输出无法复用的散文。
 - 绕过下载合规。
 - 把 sample run 冒充正式完成。
+- 让 `workspace/production_run.py` 这类一键脚本替代 Orchestrator Agent。
 
 ## 5. 阶段输入输出
 
@@ -277,6 +299,54 @@ Goal:
 - 只下载公开可访问 PDF。
 - 验证 PDF 类型、完整性、标题/作者/年份/DOI 匹配。
 - 对不可下载、付费墙、登录内容或版本冲突写明原因。
+- PDF 大小上限不应过小；当前临时生产脚本使用 150MB 上限。下载后至少检查 `%PDF` header、尾部 `%%EOF`、可解析页数、文件 hash，并标记疑似截断文件。只有来源可追溯且完整性通过的 PDF 才能进入精读队列。
+- 下载记录修复和 PDF 完整性校验优先使用正式 CLI：`python3 -m paper_reading_system reconcile-downloads`。
+- `downloaded=true` 只能表示来源可追踪且本地 PDF 通过 header、EOF、页数解析三重校验。只有 header/EOF 通过不得称为 verified downloaded。
+
+### 5.7.1 Reconcile / Compliance Repair
+
+Read:
+
+- `workspace/candidate_papers/deduplicated_candidates.jsonl`
+- `workspace/download_queue/download_records.jsonl`
+- `papers/pdf/{paper_id}.pdf`
+
+Write:
+
+- `workspace/download_queue/download_records.jsonl`
+- `reports/retrieval_coverage_report.md`
+- `reports/compliance_and_version_audit.md`
+
+Goal:
+
+- 修复下载记录和本地 PDF 的对应关系。
+- 优先复用 candidate 或 previous record 中已有的合法 `download_record`；`identity.arxiv` 只能作为后续检索线索，不能单独认证已有本地 PDF。
+- 本地 PDF 若缺少合法 `source_url/source_type`，或未通过页数解析，不得计入 downloaded。
+- 若 PDF 缺 EOF、不可解析、命中旧大小截断上限等，必须标记为 unverified 并移出精读队列。
+
+### 5.7.2 Agentic Deduplication
+
+Read:
+
+- `workspace/candidate_papers/deduplicated_candidates.jsonl`
+- `workspace/citation_graph/references.jsonl`
+- `workspace/download_queue/download_records.jsonl`
+- `papers/metadata/{paper_id}.json`
+
+Write:
+
+- `workspace/deep_reading_agentic/dedup_candidate_clusters.json`
+- `workspace/deep_reading_agentic/dedup_agent_plan.json`
+- `workspace/deep_reading_agentic/dedup_apply_report.json`
+- `reports/agentic_deduplication_report.md`
+
+Goal:
+
+- 代码可以生成疑似重复簇，但最终是否合并必须由 dedicated dedup subagent 基于 DOI/arXiv、标题语义、作者、年份、venue、引用上下文判断。
+- 对 arXiv preprint 与正式 conference/journal 版本应合并为同一工作；对标题相似但任务不同的论文必须保留。
+- 应用计划时只机械执行 subagent 的 `merge/keep_separate/uncertain` 结论，并保留 `merged_from`、`version_relations`、`source_paper_id` 和 `download_lineage`。
+- 若 plan 引用不存在的 canonical/source，或存在未被 plan 显式覆盖的重复 `paper_id` 行，CLI 必须失败，不得静默跳过或自行合并。
+- 应用计划优先使用正式 CLI：`python3 -m paper_reading_system apply-dedup-plan`。
 
 ### 5.8 Deep Reading Agent
 
@@ -295,6 +365,14 @@ Goal:
 - 做结构化精读草稿。
 - 明确问题、假设、方法、实验、限制、与综述主题关系。
 - 不负责最终 Markdown 排版。
+- production-quality 精读应采用 one-paper-one-agent：一个 subagent 只读一个 assignment、一个 PDF、一个 metadata，只写一个 note，避免上下文污染。
+- reader subagents 的启动、批次控制、等待、失败记录、QA spot check 和 index/run_summary 刷新都是 Orchestrator 的职责；Orchestrator 不应在 `assignment_ready=true` 后停止并把精读留给“后续再启动”。
+- Orchestrator 应按批次并行启动 reader subagents（建议每批 10-20 个，资源受限时可更小），每批完成后更新 `notes/deep_reading_agentic/index.md`、`reports/qa_findings.md` 和 `reports/run_summary.md`，再进入下一批或明确记录剩余 assignment。
+- Orchestrator 必须对完整队列负责，而不是仅做样例批次；只要还有未处理且未被明确排除的 assignment，就应继续监督新的 reader 批次。
+- one-paper-one-agent 模式只能从 `workspace/deep_reading_agentic/agentic_assignments.jsonl` 调度；不要 glob `workspace/deep_reading_agentic/assignments/*.json`，因为该目录可能保留 stale assignment 供审计。
+- assignment 生成优先使用正式 CLI：`python3 -m paper_reading_system build-agentic-assignments`。
+- 启动 reader subagents 前必须运行 `python3 -m paper_reading_system preflight-agentic-reading --archive-stale`，确保 assignment 唯一、PDF header/EOF/页数/hash 合格、stale assignment 已隔离。
+- preflight 必须区分 `assignment_ready` 和 `workspace_clean`：前者表示可以按 JSONL 调度 reader；后者表示没有 stale metadata/PDF 审计残留。`workspace_clean=false` 不一定阻塞精读，但必须写入报告。
 
 ### 5.9 First-Principles Critic Agent
 
@@ -326,6 +404,7 @@ Write:
 
 - `notes/deep_reading/{paper_id}__{short_title}.md`
 - `notes/index.md`
+- one-paper-one-agent 模式下，写入 `notes/deep_reading_agentic/{paper_id}__{short_title}.md` 和 `notes/deep_reading_agentic/index.md`。
 
 Goal:
 
@@ -350,6 +429,7 @@ Write:
 Goal:
 
 - 检查 hallucination risk、无来源判断、模板缺项、重复文件、PDF/metadata 不一致、schema、状态机、合规和低置信度项。
+- 在 agentic 精读前，额外检查 `workspace/deep_reading_agentic/preflight_agentic_reading_report.json` 和 `reports/agentic_reading_preflight.md`。若存在 assignment-level PDF risk，不应启动对应 reader subagent。
 
 ### 5.12 Idea Synthesizer Agent
 

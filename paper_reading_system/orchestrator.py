@@ -64,7 +64,7 @@ def score_candidates(root: Path, input_path: Path, output_path: Path) -> int:
     return len(candidates)
 
 
-def scaffold_notes(root: Path, scored_candidates_path: Path, force: bool = False) -> int:
+def scaffold_notes(root: Path, scored_candidates_path: Path, force: bool = False) -> ScaffoldResult:
     state = WorkflowState(root)
     candidates = _read_validated_candidates(scored_candidates_path)
     readable_candidates = [candidate for candidate in candidates if not candidate.exclude_from_deep_reading]
